@@ -1,4 +1,4 @@
-package com.github.jmabuin;
+package com.github.jmabuin.blaspark.operations;
 
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
