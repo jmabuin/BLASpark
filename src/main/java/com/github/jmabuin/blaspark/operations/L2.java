@@ -18,7 +18,6 @@ import java.util.List;
  */
 public class L2  {
 
-
     public static DenseVector DGEMV(DistributedMatrix matrix, DenseVector vector, JavaSparkContext jsc){
 
         // Case of IndexedRowMatrix
