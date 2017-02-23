@@ -48,7 +48,8 @@ public class ConjugateGradientSolver {
 		DenseVector p = r.copy();
 
 		//rsold = r*r
-		double rsold = L1.multiply(r,r);
+		//double rsold = L1.multiply(r,r);
+		double rsold = BLAS.dot(r,r);
 
 		double alpha = 0.0;
 
@@ -66,7 +67,8 @@ public class ConjugateGradientSolver {
 			//Fin -- Ap=A*p
 
 			//alpha=rsold/(p'*Ap)
-			alpha = rsold/L1.multiply(p,Ap);
+			//alpha = rsold/L1.multiply(p,Ap);
+			alpha = rsold/BLAS.dot(p,Ap);
 
 			//x=x+alpha*p
 
