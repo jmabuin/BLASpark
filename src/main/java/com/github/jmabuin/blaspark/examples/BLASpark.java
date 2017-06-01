@@ -39,6 +39,10 @@ public class BLASpark {
 
         if(BLASparkOptions.getMode() == GeneralOptions.Mode.DMXV) {
 
+            LOG.warn("Starting dense matrix dot vector multiplication example...");
+            DmXV exDmXV = new DmXV(BLASparkOptions, ctx);
+
+            exDmXV.calculate();
         }
         else if(BLASparkOptions.getMode() == GeneralOptions.Mode.CG) {
 
