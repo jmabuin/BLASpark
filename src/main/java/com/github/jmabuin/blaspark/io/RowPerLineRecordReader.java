@@ -83,7 +83,7 @@ public class RowPerLineRecordReader extends RecordReader<Long, double[]> {
 				//this.firstValues = true;
 			}
 			else{
-				//To skip the first values in the first split, taht are the matrix row number, col number and not zero values
+				//To skip the first values in the first split, that are the matrix row number, col number and not zero values
 				if(!this.firstSplit){
 					String[] dataLine = s.split(":");
 

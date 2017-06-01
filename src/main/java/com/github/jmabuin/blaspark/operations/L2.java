@@ -30,7 +30,7 @@ public class L2  {
             JavaRDD<IndexedRow> rows = indexedMatrix.rows().toJavaRDD();
             List<Double> returnValues = rows.mapToPair(new PairFunction<IndexedRow, Long, Double>() {
 
-                @Override
+                //@Override
                 public Tuple2<Long, Double> call(IndexedRow row) {
                     DenseVector vect = (DenseVector) BC.getValue();
 

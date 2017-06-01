@@ -1,6 +1,8 @@
 package com.github.jmabuin.blaspark.examples;
 
 import breeze.linalg.DenseMatrix;
+import com.github.jmabuin.blaspark.examples.options.GeneralOptions;
+import com.github.jmabuin.blaspark.examples.spark.Array2IndexedRow;
 import com.github.jmabuin.blaspark.io.IO;
 import com.github.jmabuin.blaspark.io.RowPerLineInputFormat;
 import com.github.jmabuin.blaspark.solvers.ConjugateGradientSolver;
@@ -27,70 +29,66 @@ public class ConjugateGradientExample {
 
 	private static final Log LOG = LogFactory.getLog(ConjugateGradientExample.class);
 
-	public static void main(String[] args) {
+	private IndexedRowMatrix matrix;
+	private DenseVector vector;
+	private DenseVector outputVector;
 
-		SparkConf sparkConf = new SparkConf().setAppName("BLASpark - Example CG");
+	private String inputVectorPath;
+	private String inputMatrixPath;
+	private String outputVectorPath;
 
-		sparkConf.set("spark.shuffle.reduceLocality.enabled","false");
-		//sparkConf.set("spark.memory.useLegacyMode","true");
+	private JavaSparkContext ctx;
+	private long iterationNumber;
 
-		// Kryo serializer
-		/*sparkConf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer");
+	public ConjugateGradientExample(GeneralOptions CG_Options, JavaSparkContext ctx ) {
 
-		Class[] serializedClasses = {Location.class, Sketch.class};
-		sparkConf.registerKryoClasses(serializedClasses);
-		*/
+		this.ctx = ctx;
 
-		//The ctx is created from the previous config
-		JavaSparkContext ctx = new JavaSparkContext(sparkConf);
-		//ctx.hadoopConfiguration().set("parquet.enable.summary-metadata", "false");
+		this.ctx.getConf().setAppName("BLASpark - Example CG");
 
-		ConjugateGradientOptions CG_Options = new ConjugateGradientOptions(args);
-
-		long iterationNumber = CG_Options.getIterationNumber();
+		this.iterationNumber = CG_Options.getIterationNumber();
 		long numPartitions = CG_Options.getNumPartitions();
 
 
-		String inputVectorPath = CG_Options.getInputVectorPath();
-		String inputMatrixPath = CG_Options.getInputMatrixPath();
-		String outputVectorPath = CG_Options.getOutputVectorPath();
+		this.inputVectorPath = CG_Options.getInputVectorPath();
+		this.inputMatrixPath = CG_Options.getInputMatrixPath();
+		this.outputVectorPath = CG_Options.getOutputVectorPath();
 
 		// Read MATRIX input data
 		JavaRDD<IndexedRow> inputMatrixData;
 
 		if(numPartitions != 0) {
 			inputMatrixData = ctx.newAPIHadoopFile(inputMatrixPath, RowPerLineInputFormat.class,
-					Long.class, double[].class, ctx.hadoopConfiguration()).map(new Function<Tuple2<Long, double[]>, IndexedRow>() {
-				@Override
-				public IndexedRow call(Tuple2<Long, double[]> longTuple2) throws Exception {
-					return new IndexedRow(longTuple2._1(), new DenseVector(longTuple2._2()));
-				}
-			}).repartition((int)numPartitions);
+					Long.class, double[].class, ctx.hadoopConfiguration())
+					.map(new Array2IndexedRow())
+					.repartition((int)numPartitions);
 		}
 		else {
 			inputMatrixData = ctx.newAPIHadoopFile(inputMatrixPath, RowPerLineInputFormat.class,
-					Long.class, double[].class, ctx.hadoopConfiguration()).map(new Function<Tuple2<Long, double[]>, IndexedRow>() {
-				@Override
-				public IndexedRow call(Tuple2<Long, double[]> longTuple2) throws Exception {
-					return new IndexedRow(longTuple2._1(), new DenseVector(longTuple2._2()));
-				}
-			});
+					Long.class, double[].class, ctx.hadoopConfiguration())
+					.map(new Array2IndexedRow());
 		}
 
 
-		IndexedRowMatrix matrix = new IndexedRowMatrix(inputMatrixData.rdd());
-		matrix.rows().cache();
+		this.matrix = new IndexedRowMatrix(inputMatrixData.rdd());
+		this.matrix.rows().cache();
 
 		// Read VECTOR input data
-		DenseVector inputVector = IO.readVectorFromFileInHDFS(inputVectorPath, ctx.hadoopConfiguration());
+		this.vector = IO.readVectorFromFileInHDFS(this.inputVectorPath, this.ctx.hadoopConfiguration());
 
-		DenseVector outputVector = Vectors.zeros(inputVector.size()).toDense();
+		this.outputVector = Vectors.zeros(this.vector.size()).toDense();
 
 
-		outputVector = ConjugateGradientSolver.solve(matrix, inputVector, outputVector, iterationNumber, ctx);
 
-		IO.writeVectorToFileInHDFS(outputVectorPath, outputVector, ctx.hadoopConfiguration());
 
+
+	}
+
+	public void calculate() {
+
+		this.outputVector = ConjugateGradientSolver.solve(matrix, this.vector, this.outputVector, this.iterationNumber, this.ctx);
+
+		IO.writeVectorToFileInHDFS(outputVectorPath, this.outputVector, this.ctx.hadoopConfiguration());
 
 	}
 
