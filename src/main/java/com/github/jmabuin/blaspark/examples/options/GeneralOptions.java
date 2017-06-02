@@ -1,20 +1,20 @@
 /**
  * Copyright 2017 José Manuel Abuín Mosquera <josemanuel.abuin@usc.es>
  *
- * This file is part of blaSpark.
+ * This file is part of BLASpark.
  *
- * blaSpark is free software: you can redistribute it and/or modify
+ * BLASpark is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * blaSpark is distributed in the hope that it will be useful,
+ * BLASpark is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with blaSpark. If not, see <http://www.gnu.org/licenses/>.
+ * along with BLASpark. If not, see <http://www.gnu.org/licenses/>.
  */
 
 package com.github.jmabuin.blaspark.examples.options;
@@ -142,11 +142,13 @@ public class GeneralOptions {
 
         OptionGroup general = new OptionGroup();
 
+        // Help
         Option help = new Option("h","help", false,"Shows documentation");
         general.addOption(help);
 
         privateOptions.addOptionGroup(general);
 
+        // Operations
         OptionGroup operations = new OptionGroup();
 
         Option dmxv = new Option("d", "dmxv", false, "Performs a distributed dense matrix dot vector operation");
@@ -155,31 +157,29 @@ public class GeneralOptions {
         Option smxv = new Option("s", "smxv", false, "Performs a distributed sparse matrix dot vector operation");
         operations.addOption(smxv);
 
+        Option conjGrad = new Option("c", "conjGrad", false, "Solves a system with the conjugate gradient method");
+        operations.addOption(conjGrad);
+
         privateOptions.addOptionGroup(operations);
 
-        OptionGroup solvers = new OptionGroup();
-        Option conjGrad = new Option("c", "conjGrad", false, "Solves a system with the conjugate gradient method");
-        solvers.addOption(conjGrad);
 
-
-        privateOptions.addOptionGroup(solvers);
-
+        // Number of iterations for CG
         Option iteration = new Option("i","iteration", true,"Number of iterations to perform");
         //buildOptions.addOption(sketchlen);
         privateOptions.addOption(iteration);
 
 
+        // Matrix formats
         OptionGroup matrixFormat = new OptionGroup();
         Option pairLine = new Option("l", "pairLine", false, "The matrix format will be a JavaPairRDD<Long, DenseVector>");
 
         matrixFormat.addOption(pairLine);
         privateOptions.addOptionGroup(matrixFormat);
 
-        OptionGroup performance = new OptionGroup();
+        // Partition number
         Option partitions = new Option("p","partitions", true,"Number of partitions to divide the matrix");
-        performance.addOption(partitions);
+        privateOptions.addOption(partitions);
 
-        privateOptions.addOptionGroup(performance);
 
         return privateOptions;
     }

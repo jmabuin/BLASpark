@@ -1,3 +1,22 @@
+/**
+ * Copyright 2017 José Manuel Abuín Mosquera <josemanuel.abuin@usc.es>
+ *
+ * This file is part of BLASpark.
+ *
+ * BLASpark is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * BLASpark is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with BLASpark. If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package com.github.jmabuin.blaspark.examples;
 
 import com.github.jmabuin.blaspark.examples.options.GeneralOptions;
@@ -17,7 +36,9 @@ import org.apache.spark.mllib.linalg.distributed.IndexedRowMatrix;
 import scala.Tuple2;
 
 /**
- * Created by chema on 5/31/17.
+ * Main class to perform the examples
+ * @author Jose M. Abuin
+ * @brief Main class to perform the examples
  */
 public class BLASpark {
 
@@ -25,7 +46,7 @@ public class BLASpark {
 
     public static void main(String[] args) {
 
-        SparkConf sparkConf = new SparkConf().setAppName("BLASpark - Example CG");
+        SparkConf sparkConf = new SparkConf();//.setAppName("BLASpark - Example CG");
 
         sparkConf.set("spark.shuffle.reduceLocality.enabled","false");
         //sparkConf.set("spark.memory.useLegacyMode","true");

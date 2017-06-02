@@ -1,3 +1,22 @@
+/**
+ * Copyright 2017 José Manuel Abuín Mosquera <josemanuel.abuin@usc.es>
+ *
+ * This file is part of BLASpark.
+ *
+ * BLASpark is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * BLASpark is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with BLASpark. If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package com.github.jmabuin.blaspark.operations;
 
 import org.apache.spark.api.java.JavaRDD;
@@ -14,7 +33,8 @@ import scala.Tuple2;
 import java.util.List;
 
 /**
- * Created by jabuinmo on 07.02.17.
+ * @author Jose M. Abuin
+ * @brief Class to perform Level 2 BLAS operations
  */
 public class L2  {
 
@@ -28,22 +48,23 @@ public class L2  {
             IndexedRowMatrix indexedMatrix = (IndexedRowMatrix) matrix;
 
             JavaRDD<IndexedRow> rows = indexedMatrix.rows().toJavaRDD();
-            List<Double> returnValues = rows.mapToPair(new PairFunction<IndexedRow, Long, Double>() {
+            List<Tuple2<Long, Double>> returnValues = rows.mapToPair(new PairFunction<IndexedRow, Long, Double>() {
 
-                //@Override
+                @Override
                 public Tuple2<Long, Double> call(IndexedRow row) {
                     DenseVector vect = (DenseVector) BC.getValue();
 
                     return new Tuple2<Long, Double>(row.index(), BLAS.dot(row.vector(), vect));
                 }
 
-            }).sortByKey().values().collect();
+            }).collect();
 
 
             double[] stockArr = new double[returnValues.size()];
 
-            for(int i = 0; i< returnValues.size(); i++) {
-                stockArr[i] = returnValues.get(i);
+            //for(int i = 0; i< returnValues.size(); i++) {
+            for(Tuple2<Long, Double> item : returnValues) {
+                stockArr[item._1().intValue()] = item._2();
             }
 
             return new DenseVector(stockArr);
