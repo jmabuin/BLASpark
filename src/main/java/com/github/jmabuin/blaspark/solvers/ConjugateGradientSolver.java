@@ -25,7 +25,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.mllib.linalg.BLAS;
 import org.apache.spark.mllib.linalg.DenseVector;
-import org.apache.spark.mllib.linalg.distributed.IndexedRowMatrix;
+import org.apache.spark.mllib.linalg.distributed.DistributedMatrix;
 
 /**
  * Class to implement the Conjugate Gradient method
@@ -45,7 +45,7 @@ public class ConjugateGradientSolver {
 	 * @param numIterations The max number of iterations to perform
 	 * @return
 	 */
-	public static DenseVector solve(IndexedRowMatrix matrix, DenseVector inputVector, DenseVector outputVector,
+	public static DenseVector solve(DistributedMatrix matrix, DenseVector inputVector, DenseVector outputVector,
 									long numIterations, JavaSparkContext jsc) {
 
 

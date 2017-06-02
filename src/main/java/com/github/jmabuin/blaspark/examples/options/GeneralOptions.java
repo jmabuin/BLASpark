@@ -34,7 +34,7 @@ public class GeneralOptions {
     private Options options = null;
 
     public enum Mode { HELP, DMXV, SMXV, CG}
-    public enum MatrixFormat {PAIRLINE};
+    public enum MatrixFormat {PAIRLINE, COORDINATE};
 
     private Mode mode;
     private MatrixFormat matrixFormat;
@@ -88,6 +88,12 @@ public class GeneralOptions {
             }
 
             if(cmd.hasOption('l') || cmd.hasOption("pairLine")) {
+                this.matrixFormat = MatrixFormat.PAIRLINE;
+            }
+            else if(cmd.hasOption('o') || cmd.hasOption("coordinate")) {
+                this.matrixFormat = MatrixFormat.COORDINATE;
+            }
+            else {
                 this.matrixFormat = MatrixFormat.PAIRLINE;
             }
 
@@ -171,9 +177,14 @@ public class GeneralOptions {
 
         // Matrix formats
         OptionGroup matrixFormat = new OptionGroup();
-        Option pairLine = new Option("l", "pairLine", false, "The matrix format will be a JavaPairRDD<Long, DenseVector>");
+        Option pairLine = new Option("l", "pairLine", false, "The matrix format will be a IndexedRowMatrix");
 
         matrixFormat.addOption(pairLine);
+
+        Option coordinate = new Option("o", "coordinate", false, "The matrix format will be a CoordinateMatrix");
+
+        matrixFormat.addOption(coordinate);
+
         privateOptions.addOptionGroup(matrixFormat);
 
         // Partition number
