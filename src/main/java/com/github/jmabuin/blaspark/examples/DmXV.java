@@ -30,8 +30,7 @@ import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.mllib.linalg.DenseVector;
 import org.apache.spark.mllib.linalg.Vectors;
-import org.apache.spark.mllib.linalg.distributed.IndexedRow;
-import org.apache.spark.mllib.linalg.distributed.IndexedRowMatrix;
+import org.apache.spark.mllib.linalg.distributed.*;
 
 /**
  * Class to implement the dense matrix dot vector multiplication example
@@ -42,7 +41,8 @@ public class DmXV {
 
     private static final Log LOG = LogFactory.getLog(DmXV.class);
 
-    private IndexedRowMatrix matrix;
+    private IndexedRowMatrix tmpMatrix;
+    private DistributedMatrix matrix;
     private DenseVector vector;
     private DenseVector outputVector;
 
@@ -80,8 +80,25 @@ public class DmXV {
         }
 
 
-        this.matrix = new IndexedRowMatrix(inputMatrixData.rdd());
-        this.matrix.rows().cache();
+        this.tmpMatrix = new IndexedRowMatrix(inputMatrixData.rdd());
+
+        if(DmXV_Options.getMatrixFormat() == GeneralOptions.MatrixFormat.COORDINATE) {
+            LOG.info("The matrix format is CoordinateMatrix");
+            this.matrix = this.tmpMatrix.toCoordinateMatrix();
+            ((CoordinateMatrix)this.matrix).entries().cache();
+        }
+        else if(DmXV_Options.getMatrixFormat() == GeneralOptions.MatrixFormat.BLOCK) {
+            LOG.info("The matrix format is BlockMatrix. Nrows: "+DmXV_Options.getRowsPerlBlock()+". Ncols: "+DmXV_Options.getColsPerBlock());
+            this.matrix = this.tmpMatrix.toBlockMatrix(DmXV_Options.getRowsPerlBlock(), DmXV_Options.getColsPerBlock());
+            ((BlockMatrix)this.matrix).blocks().cache();
+        }
+        else {
+            //this.tmpMatrix.rows().cache();
+            LOG.info("The matrix format is IndexedRowMatrix");
+            this.matrix = this.tmpMatrix;
+            ((IndexedRowMatrix)this.matrix).rows().cache();
+        }
+
 
         // Read VECTOR input data
         this.vector = IO.readVectorFromFileInHDFS(this.inputVectorPath, this.ctx.hadoopConfiguration());
@@ -97,7 +114,7 @@ public class DmXV {
     public void calculate() {
 
         //this.outputVector = ConjugateGradientSolver.solve(matrix, this.vector, this.outputVector, this.iterationNumber, this.ctx);
-        this.outputVector = L2.DGEMV(matrix, this.vector, this.ctx);
+        this.outputVector = L2.DGEMV(this.matrix, this.vector, this.ctx);
 
         IO.writeVectorToFileInHDFS(outputVectorPath, this.outputVector, this.ctx.hadoopConfiguration());
 

@@ -21,14 +21,20 @@ package com.github.jmabuin.blaspark.operations;
 
 import com.github.jmabuin.blaspark.spark.MatrixEntriesMultiplication;
 import com.github.jmabuin.blaspark.spark.MatrixEntriesMultiplicationReducer;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.FlatMapFunction;
+import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.Function2;
 import org.apache.spark.api.java.function.PairFunction;
 import org.apache.spark.broadcast.Broadcast;
 import org.apache.spark.mllib.linalg.BLAS;
 import org.apache.spark.mllib.linalg.DenseVector;
+import org.apache.spark.mllib.linalg.Matrix;
+import org.apache.spark.mllib.linalg.Vectors;
 import org.apache.spark.mllib.linalg.distributed.*;
 import scala.Tuple2;
 
@@ -41,6 +47,8 @@ import java.util.List;
  */
 public class L2  {
 
+    private static final Log LOG = LogFactory.getLog(L2.class);
+
     public static DenseVector DGEMV(DistributedMatrix matrix, DenseVector vector, JavaSparkContext jsc){
 
         // Case of IndexedRowMatrix
@@ -49,6 +57,9 @@ public class L2  {
         }
         else if (matrix.getClass() == CoordinateMatrix.class) {
             return L2.DGEMV_COORD((CoordinateMatrix) matrix, vector, jsc);
+        }
+        else if (matrix.getClass() == BlockMatrix.class){
+            return L2.DGEMV_BCK((BlockMatrix) matrix, vector, jsc);
         }
         else {
             return null;
@@ -93,6 +104,80 @@ public class L2  {
                 .reduce(new MatrixEntriesMultiplicationReducer());
 
         return result;
+    }
+
+    /**
+     * TODO: Not working in Spark 2.1.0 nor 1.6.1 because of the toBlockMatrix method (I think)
+     * @param matrix
+     * @param vector
+     * @param jsc
+     * @return
+     */
+    private static DenseVector DGEMV_BCK(BlockMatrix matrix, DenseVector vector, JavaSparkContext jsc) {
+
+        final Broadcast BC = jsc.broadcast(vector);
+
+        // Theoretically, the index should be a Tuple2<Integer, Integer>
+        JavaRDD<Tuple2<Tuple2<Object, Object>, Matrix>> blocks = matrix.blocks().toJavaRDD();
+        //JavaRDD<Tuple2<Tuple2<Integer, Integer>, Matrix>> blocks = matrix.blocks().toJavaRDD();
+
+        DenseVector returnValues = blocks.map(new Function<Tuple2<Tuple2<Object,Object>,Matrix>, DenseVector>() {
+
+            @Override
+            public DenseVector call(Tuple2<Tuple2<Object, Object>, Matrix> block) {
+                LOG.warn("[JMAbuin] Entering Map Phase");
+                DenseVector inputVect = (DenseVector) BC.getValue();
+                LOG.warn("[JMAbuin] Vector items: "+inputVect.size());
+
+                double finalResultArray[] = new double[inputVect.size()];
+
+                for(int i = 0; i< finalResultArray.length; i++) {
+                    finalResultArray[i] = 0.0;
+                }
+
+                LOG.warn("[JMAbuin] Before loading rows and cols: "+inputVect.size());
+                Integer row = (Integer)block._1._1; //Integer.parseInt(block._1._1.toString());
+                Integer col = (Integer)block._1._2;//Integer.parseInt(block._1._2.toString());
+
+                LOG.warn("[JMAbuin] Row is: "+row);
+                LOG.warn("[JMAbuin] Col is: "+col);
+
+                Matrix matr = block._2;
+
+                double vectValues[] = new double[matr.numCols()];
+                double resultArray[] = new double[matr.numCols()];
+
+                for(int i = col; i < matr.numCols();i++) {
+                    vectValues[(i-col)] = inputVect.apply(i);
+                    resultArray[(i-col)] = 0.0;
+                }
+
+                DenseVector result = Vectors.zeros(matr.numCols()).toDense();//new DenseVector(resultArray);
+
+                BLAS.gemv(1.0, matr, new DenseVector(vectValues), 0.0, result);
+
+                for(int i = col; i < matr.numCols();i++) {
+                    finalResultArray[i] = result.apply((i-col));
+                }
+
+                return new DenseVector(finalResultArray);
+            }
+
+        }).reduce(new Function2<DenseVector, DenseVector, DenseVector>() {
+            @Override
+            public DenseVector call(DenseVector vector, DenseVector vector2) throws Exception {
+                double result[] = new double[vector.size()];
+
+                for(int i = 0; i< result.length;i++) {
+                    result[i] = vector.apply(i) + vector2.apply(i);
+                }
+
+                return new DenseVector(result);
+            }
+        });
+
+
+        return returnValues;
     }
 
 }

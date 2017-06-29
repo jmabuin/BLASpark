@@ -34,7 +34,7 @@ public class GeneralOptions {
     private Options options = null;
 
     public enum Mode { HELP, DMXV, SMXV, CG}
-    public enum MatrixFormat {PAIRLINE, COORDINATE};
+    public enum MatrixFormat {PAIRLINE, COORDINATE, BLOCK};
 
     private Mode mode;
     private MatrixFormat matrixFormat;
@@ -56,6 +56,9 @@ public class GeneralOptions {
     private String inputVectorPath;
     private String inputMatrixPath;
     private String outputVectorPath;
+
+    private int rowsPerlBlock = 0;
+    private int colsPerBlock = 0;
 
     public GeneralOptions(String[] args) {
 
@@ -83,7 +86,7 @@ public class GeneralOptions {
                 this.mode = Mode.CG;
             } else {
                 // Default case. Help
-                LOG.warn("[" + this.getClass().getName() + "] :: No operation mode selected. Using help ");
+                LOG.warn("[" + this.getClass().getName() + "] :: No operation mode selected. Using help.");
                 this.mode = Mode.HELP;
             }
 
@@ -92,6 +95,20 @@ public class GeneralOptions {
             }
             else if(cmd.hasOption('o') || cmd.hasOption("coordinate")) {
                 this.matrixFormat = MatrixFormat.COORDINATE;
+            }
+            else if(cmd.hasOption('b') || cmd.hasOption("blocked")) {
+                this.matrixFormat = MatrixFormat.BLOCK;
+
+                if(!cmd.hasOption("rows") || !cmd.hasOption("cols")) {
+                    LOG.error("[" + this.getClass().getName() + "] :: The number of rows or cols has not been specified.");
+                    this.printHelp();
+                    System.exit(1);
+                }
+                else {
+                    this.colsPerBlock = Integer.parseInt(cmd.getOptionValue("cols"));
+                    this.rowsPerlBlock = Integer.parseInt(cmd.getOptionValue("rows"));
+                }
+
             }
             else {
                 this.matrixFormat = MatrixFormat.PAIRLINE;
@@ -171,19 +188,19 @@ public class GeneralOptions {
 
         // Number of iterations for CG
         Option iteration = new Option("i","iteration", true,"Number of iterations to perform");
-        //buildOptions.addOption(sketchlen);
         privateOptions.addOption(iteration);
 
 
         // Matrix formats
         OptionGroup matrixFormat = new OptionGroup();
         Option pairLine = new Option("l", "pairLine", false, "The matrix format will be a IndexedRowMatrix");
-
         matrixFormat.addOption(pairLine);
 
         Option coordinate = new Option("o", "coordinate", false, "The matrix format will be a CoordinateMatrix");
-
         matrixFormat.addOption(coordinate);
+
+        Option blocked = new Option("b", "blocked", false, "The matrix format will be a BlockMatrix");
+        matrixFormat.addOption(blocked);
 
         privateOptions.addOptionGroup(matrixFormat);
 
@@ -191,6 +208,12 @@ public class GeneralOptions {
         Option partitions = new Option("p","partitions", true,"Number of partitions to divide the matrix");
         privateOptions.addOption(partitions);
 
+        // Rows and cols per block for blocked format
+        Option rowsPerBlock = new Option(null,"rows", true,"Number of rows for block in BlockMatrix format");
+        privateOptions.addOption(rowsPerBlock);
+
+        Option colsPerBlock = new Option(null,"cols", true,"Number of cols for block in BlockMatrix format");
+        privateOptions.addOption(colsPerBlock);
 
         return privateOptions;
     }
@@ -233,5 +256,13 @@ public class GeneralOptions {
 
     public String getOutputVectorPath() {
         return outputVectorPath;
+    }
+
+    public int getRowsPerlBlock() {
+        return rowsPerlBlock;
+    }
+
+    public int getColsPerBlock() {
+        return colsPerBlock;
     }
 }
