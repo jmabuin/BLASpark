@@ -82,7 +82,7 @@ public class ConjugateGradientSolver {
 
 			//Inicio -- Ap=A*p
 			//Ap = L2.DGEMV(1.0, matrix, p, 0.0, Ap, jsc);
-			L2.DGEMV(1.0, matrix, p, 0.0, Ap, jsc);
+			Ap = L2.DGEMV(1.0, matrix, p, 0.0, Ap, jsc);
 
 			//Fin -- Ap=A*p
 
