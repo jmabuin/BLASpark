@@ -33,10 +33,12 @@ import java.util.List;
 public class MatrixEntriesMultiplication implements FlatMapFunction<Iterator<MatrixEntry>, DenseVector> {
 
     private DenseVector vector;
+    private double alpha;
 
-    public MatrixEntriesMultiplication(DenseVector vector) {
+    public MatrixEntriesMultiplication(DenseVector vector, double alpha) {
 
         this.vector = vector;
+        this.alpha = alpha;
     }
 
     @Override
@@ -54,7 +56,7 @@ public class MatrixEntriesMultiplication implements FlatMapFunction<Iterator<Mat
 
             entry = matrixEntryIterator.next();
 
-            result[(int)entry.i()] = result[(int)entry.i()] + (vector.apply((int)entry.j()) * entry.value());
+            result[(int)entry.i()] = result[(int)entry.i()] + (this.vector.apply((int)entry.j()) * entry.value() * this.alpha);
 
         }
 

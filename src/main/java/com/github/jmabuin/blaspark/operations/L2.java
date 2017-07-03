@@ -49,28 +49,51 @@ public class L2  {
 
     private static final Log LOG = LogFactory.getLog(L2.class);
 
-    public static DenseVector DGEMV(DistributedMatrix matrix, DenseVector vector, JavaSparkContext jsc){
+    // y := alpha*A*x + beta*y
+    public static DenseVector DGEMV(double alpha, DistributedMatrix A, DenseVector x, double beta, DenseVector y, JavaSparkContext jsc){
 
+        // First form  y := beta*y.
+        if (beta != 1.0) {
+            if (beta == 0.0) {
+                y = Vectors.zeros(y.size()).toDense();
+            }
+            else {
+                BLAS.scal(beta, y);
+            }
+        }
+
+        if (alpha == 0.0) {
+            return y;
+        }
+
+        DenseVector tmpVector = Vectors.zeros(y.size()).toDense();
+
+        // Form  y := alpha*A*x + y.
         // Case of IndexedRowMatrix
-        if( matrix.getClass() == IndexedRowMatrix.class) {
-            return L2.DGEMV_IRW((IndexedRowMatrix) matrix, vector, jsc);
+        if( A.getClass() == IndexedRowMatrix.class) {
+            tmpVector = L2.DGEMV_IRW((IndexedRowMatrix) A, alpha, x, jsc);
         }
-        else if (matrix.getClass() == CoordinateMatrix.class) {
-            return L2.DGEMV_COORD((CoordinateMatrix) matrix, vector, jsc);
+        else if (A.getClass() == CoordinateMatrix.class) {
+            tmpVector = L2.DGEMV_COORD((CoordinateMatrix) A, alpha, x, jsc);
         }
-        else if (matrix.getClass() == BlockMatrix.class){
-            return L2.DGEMV_BCK((BlockMatrix) matrix, vector, jsc);
+        else if (A.getClass() == BlockMatrix.class){
+            tmpVector = L2.DGEMV_BCK((BlockMatrix) A, alpha, x, jsc);
         }
         else {
-            return null;
+            tmpVector = null;
         }
 
+        BLAS.axpy(1.0, tmpVector, y);
+
+
+        return y;
 
     }
 
-    private static DenseVector DGEMV_IRW(IndexedRowMatrix matrix, DenseVector vector, JavaSparkContext jsc) {
+    private static DenseVector DGEMV_IRW(IndexedRowMatrix matrix, double alpha, DenseVector vector, JavaSparkContext jsc) {
 
         final Broadcast BC = jsc.broadcast(vector);
+        final Broadcast<Double> AlphaBC = jsc.broadcast(alpha);
 
         //IndexedRowMatrix indexedMatrix = (IndexedRowMatrix) matrix;
 
@@ -80,8 +103,13 @@ public class L2  {
             @Override
             public Tuple2<Long, Double> call(IndexedRow row) {
                 DenseVector vect = (DenseVector) BC.getValue();
+                double alphaBCRec = AlphaBC.getValue().doubleValue();
 
-                return new Tuple2<Long, Double>(row.index(), BLAS.dot(row.vector(), vect));
+                DenseVector tmp = row.vector().copy().toDense();
+
+                BLAS.scal(alphaBCRec, tmp);
+
+                return new Tuple2<Long, Double>(row.index(), BLAS.dot(tmp, vect));
             }
 
         }).collect();
@@ -97,10 +125,10 @@ public class L2  {
         return new DenseVector(stockArr);
     }
 
-    private static DenseVector DGEMV_COORD(CoordinateMatrix matrix, DenseVector vector, JavaSparkContext jsc) {
+    private static DenseVector DGEMV_COORD(CoordinateMatrix matrix, double alpha, DenseVector vector, JavaSparkContext jsc) {
 
         JavaRDD<MatrixEntry> items = matrix.entries().toJavaRDD();
-        DenseVector result = items.mapPartitions(new MatrixEntriesMultiplication(vector))
+        DenseVector result = items.mapPartitions(new MatrixEntriesMultiplication(vector, alpha))
                 .reduce(new MatrixEntriesMultiplicationReducer());
 
         return result;
@@ -113,10 +141,11 @@ public class L2  {
      * @param jsc
      * @return
      */
-    private static DenseVector DGEMV_BCK(BlockMatrix matrix, DenseVector vector, JavaSparkContext jsc) {
+    private static DenseVector DGEMV_BCK(BlockMatrix matrix, double alpha, DenseVector vector, JavaSparkContext jsc) {
 
         final Broadcast BC = jsc.broadcast(vector);
-
+        //final Broadcast AlphaBC = jsc.broadcast(alpha);
+        final Broadcast<Double> AlphaBC = jsc.broadcast(alpha);
         // Theoretically, the index should be a Tuple2<Integer, Integer>
         JavaRDD<Tuple2<Tuple2<Object, Object>, Matrix>> blocks = matrix.blocks().toJavaRDD();
         //JavaRDD<Tuple2<Tuple2<Integer, Integer>, Matrix>> blocks = matrix.blocks().toJavaRDD();
@@ -127,6 +156,8 @@ public class L2  {
             public DenseVector call(Tuple2<Tuple2<Object, Object>, Matrix> block) {
                 LOG.warn("[JMAbuin] Entering Map Phase");
                 DenseVector inputVect = (DenseVector) BC.getValue();
+                double alphaBCRec = AlphaBC.getValue().doubleValue();
+
                 LOG.warn("[JMAbuin] Vector items: "+inputVect.size());
 
                 double finalResultArray[] = new double[inputVect.size()];
@@ -154,7 +185,7 @@ public class L2  {
 
                 DenseVector result = Vectors.zeros(matr.numCols()).toDense();//new DenseVector(resultArray);
 
-                BLAS.gemv(1.0, matr, new DenseVector(vectValues), 0.0, result);
+                BLAS.gemv(alphaBCRec, matr, new DenseVector(vectValues), 0.0, result);
 
                 for(int i = col; i < matr.numCols();i++) {
                     finalResultArray[i] = result.apply((i-col));

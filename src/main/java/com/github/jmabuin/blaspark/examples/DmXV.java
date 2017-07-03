@@ -52,6 +52,9 @@ public class DmXV {
 
     private JavaSparkContext ctx;
 
+    private double alpha;
+    private double beta;
+
     public DmXV(GeneralOptions DmXV_Options, JavaSparkContext ctx ) {
 
         this.ctx = ctx;
@@ -63,6 +66,9 @@ public class DmXV {
         this.inputVectorPath = DmXV_Options.getInputVectorPath();
         this.inputMatrixPath = DmXV_Options.getInputMatrixPath();
         this.outputVectorPath = DmXV_Options.getOutputVectorPath();
+
+        this.alpha = DmXV_Options.getAlpha();
+        this.beta = DmXV_Options.getBeta();
 
         // Read MATRIX input data
         JavaRDD<IndexedRow> inputMatrixData;
@@ -114,9 +120,9 @@ public class DmXV {
     public void calculate() {
 
         //this.outputVector = ConjugateGradientSolver.solve(matrix, this.vector, this.outputVector, this.iterationNumber, this.ctx);
-        this.outputVector = L2.DGEMV(this.matrix, this.vector, this.ctx);
+        this.outputVector = L2.DGEMV(this.alpha, this.matrix, this.vector, this.beta, this.outputVector, this.ctx);
 
-        IO.writeVectorToFileInHDFS(outputVectorPath, this.outputVector, this.ctx.hadoopConfiguration());
+        IO.writeVectorToFileInHDFS(this.outputVectorPath, this.outputVector, this.ctx.hadoopConfiguration());
 
     }
 

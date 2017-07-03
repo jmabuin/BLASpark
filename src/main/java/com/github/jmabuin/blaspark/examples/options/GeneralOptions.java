@@ -60,6 +60,9 @@ public class GeneralOptions {
     private int rowsPerlBlock = 0;
     private int colsPerBlock = 0;
 
+    private double alpha;
+    private double beta;
+
     public GeneralOptions(String[] args) {
 
         this.options = this.initOptions();
@@ -124,6 +127,20 @@ public class GeneralOptions {
 
             }
 
+            if(cmd.hasOption("alpha")) {
+                this.alpha = Double.parseDouble(cmd.getOptionValue("alpha"));
+            }
+            else {
+                this.alpha = 1.0;
+            }
+
+            if(cmd.hasOption("beta")) {
+                this.beta = Double.parseDouble(cmd.getOptionValue("beta"));
+            }
+            else {
+                this.beta = 0.0;
+            }
+
             // Get and parse the rest of the arguments
             this.otherOptions = cmd.getArgs(); //With this we get the rest of the arguments
 
@@ -164,6 +181,8 @@ public class GeneralOptions {
         Options privateOptions = new Options();
 
         OptionGroup general = new OptionGroup();
+
+        // Options: h, d, s, c, i, l, o, b, p
 
         // Help
         Option help = new Option("h","help", false,"Shows documentation");
@@ -215,6 +234,13 @@ public class GeneralOptions {
         Option colsPerBlock = new Option(null,"cols", true,"Number of cols for block in BlockMatrix format");
         privateOptions.addOption(colsPerBlock);
 
+        // Alpha and beta for DMxV operation
+        Option alpha = new Option(null, "alpha", true, "Alpha value for DMxV example");
+        privateOptions.addOption(alpha);
+
+        Option beta = new Option(null, "beta", true, "Beta value for DMxV example");
+        privateOptions.addOption(beta);
+
         return privateOptions;
     }
 
@@ -264,5 +290,13 @@ public class GeneralOptions {
 
     public int getColsPerBlock() {
         return colsPerBlock;
+    }
+
+    public double getAlpha() {
+        return alpha;
+    }
+
+    public double getBeta() {
+        return beta;
     }
 }
