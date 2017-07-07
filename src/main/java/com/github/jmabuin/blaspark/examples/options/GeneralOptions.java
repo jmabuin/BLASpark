@@ -199,14 +199,14 @@ public class GeneralOptions {
         Option smxv = new Option("s", "smxv", false, "Performs a distributed sparse matrix dot vector operation");
         operations.addOption(smxv);
 
-        Option conjGrad = new Option("c", "conjGrad", false, "Solves a system with the conjugate gradient method");
+        Option conjGrad = new Option("c", "conjGrad", false, "Solves a system by using the conjugate gradient method");
         operations.addOption(conjGrad);
 
         privateOptions.addOptionGroup(operations);
 
 
         // Number of iterations for CG
-        Option iteration = new Option("i","iteration", true,"Number of iterations to perform");
+        Option iteration = new Option("i","iteration", true,"Number of iterations to perform the conjugate gradient method");
         privateOptions.addOption(iteration);
 
 
