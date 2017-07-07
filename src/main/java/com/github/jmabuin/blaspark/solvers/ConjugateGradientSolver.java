@@ -23,6 +23,7 @@ import com.github.jmabuin.blaspark.operations.L2;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.mllib.linalg.Vectors;
 import org.apache.spark.mllib.linalg.BLAS;
 import org.apache.spark.mllib.linalg.DenseVector;
 import org.apache.spark.mllib.linalg.distributed.DistributedMatrix;
@@ -61,7 +62,7 @@ public class ConjugateGradientSolver {
 
 		//Fin -- r = b-A*x
 
-		DenseVector Ap = null;
+		DenseVector Ap = Vectors.zeros((int)matrix.numRows()).toDense();
 
 		//p=r
 		DenseVector p = r.copy();
