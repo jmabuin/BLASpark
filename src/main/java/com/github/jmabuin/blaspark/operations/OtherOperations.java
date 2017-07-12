@@ -69,6 +69,55 @@ public class OtherOperations {
 
     }
 
+    public static DistributedMatrix GetLU(DistributedMatrix A, JavaSparkContext jsc) {
+
+
+        DistributedMatrix returnedMatrix;
+
+        if( A.getClass() == IndexedRowMatrix.class) {
+            returnedMatrix = OtherOperations.GetLU_IRW((IndexedRowMatrix) A);
+        }
+        else if (A.getClass() == CoordinateMatrix.class) {
+            returnedMatrix = OtherOperations.GetLU_COORD((CoordinateMatrix) A);
+        }
+        else if (A.getClass() == BlockMatrix.class){
+            // TODO: Implement this operation
+            //returnedMatrices = OtherOperations.GetLU_BCK((BlockMatrix) A, diagonalInL, diagonalInU, jsc);
+            returnedMatrix = null;
+        }
+        else {
+            returnedMatrix = null;
+        }
+
+
+        return returnedMatrix;
+
+    }
+
+    public static DistributedMatrix GetD(DistributedMatrix A, boolean inverseValues, JavaSparkContext jsc) {
+
+        DistributedMatrix returnedMatrix;
+
+        if( A.getClass() == IndexedRowMatrix.class) {
+            returnedMatrix = OtherOperations.GetD_IRW((IndexedRowMatrix) A, inverseValues, jsc);
+        }
+        else if (A.getClass() == CoordinateMatrix.class) {
+            returnedMatrix = OtherOperations.GetD_COORD((CoordinateMatrix) A, inverseValues, jsc);
+        }
+        else if (A.getClass() == BlockMatrix.class){
+            // TODO: Implement this operation
+            //returnedMatrices = OtherOperations.GetLU_BCK((BlockMatrix) A, diagonalInL, diagonalInU, jsc);
+            returnedMatrix = null;
+        }
+        else {
+            returnedMatrix = null;
+        }
+
+
+        return returnedMatrix;
+
+    }
+
     private static IndexedRowMatrix[] GetLU_IRW(IndexedRowMatrix A, boolean diagonalInL, boolean diagonalInU, JavaSparkContext jsc) {
 
         IndexedRowMatrix[] returnMatrices = new IndexedRowMatrix[2];
@@ -285,4 +334,162 @@ public class OtherOperations {
 
         return returnMatrices;
     }
+
+    private static IndexedRowMatrix GetLU_IRW(IndexedRowMatrix A) {
+
+        JavaRDD<IndexedRow> rows = A.rows().toJavaRDD().cache();
+
+        JavaRDD<IndexedRow> LURows = rows.map(new Function<IndexedRow, IndexedRow>() {
+
+            @Override
+            public IndexedRow call(IndexedRow indexedRow) throws Exception {
+                long index = indexedRow.index();
+                DenseVector vect = indexedRow.vector().toDense();
+
+                double newValues[] = new double[vect.size()];
+
+
+                for(int i = 0; i< vect.size(); i++) {
+
+                    if( i != index) {
+                        newValues[i] = vect.apply(i);
+                    }
+                    else {
+                        newValues[i] = 0.0;
+                    }
+
+                }
+
+                DenseVector newVector = new DenseVector(newValues);
+
+                return new IndexedRow(index, newVector);
+
+            }
+        });
+
+        IndexedRowMatrix newMatrix = new IndexedRowMatrix(LURows.rdd());
+
+        return newMatrix;
+    }
+
+
+    private static CoordinateMatrix GetLU_COORD(CoordinateMatrix A) {
+
+        JavaRDD<MatrixEntry> rows = A.entries().toJavaRDD().cache();
+
+        JavaRDD<MatrixEntry> LUEntries = rows.mapPartitions(new FlatMapFunction<Iterator<MatrixEntry>, MatrixEntry>() {
+            @Override
+            public Iterator<MatrixEntry> call(Iterator<MatrixEntry> matrixEntryIterator) throws Exception {
+                List<MatrixEntry> newLowerEntries = new ArrayList<MatrixEntry>();
+
+
+                while(matrixEntryIterator.hasNext()) {
+                    MatrixEntry currentEntry = matrixEntryIterator.next();
+
+                    if(currentEntry.i() != currentEntry.j()) {
+                        newLowerEntries.add(currentEntry);
+                    }
+                    else {
+                        newLowerEntries.add(new MatrixEntry(currentEntry.i(), currentEntry.j(), 0.0));
+                    }
+
+                }
+
+                return newLowerEntries.iterator();
+            }
+        });
+
+        CoordinateMatrix newMatrix = new CoordinateMatrix(LUEntries.rdd());
+
+        return newMatrix;
+    }
+
+
+    private static IndexedRowMatrix GetD_IRW(IndexedRowMatrix A, boolean inverseValues, JavaSparkContext jsc) {
+
+        JavaRDD<IndexedRow> rows = A.rows().toJavaRDD().cache();
+
+        final Broadcast<Boolean> inverseValuesBC = jsc.broadcast(inverseValues);
+        JavaRDD<IndexedRow> LURows = rows.map(new Function<IndexedRow, IndexedRow>() {
+
+            @Override
+            public IndexedRow call(IndexedRow indexedRow) throws Exception {
+                long index = indexedRow.index();
+                DenseVector vect = indexedRow.vector().toDense();
+
+                boolean inverseValuesValue = inverseValuesBC.getValue().booleanValue();
+
+                double newValues[] = new double[vect.size()];
+
+
+                for(int i = 0; i< vect.size(); i++) {
+
+                    if( i == index) {
+                        if(inverseValuesValue) {
+                            newValues[i] = 1.0/vect.apply(i);
+                        }
+                        else {
+                            newValues[i] = vect.apply(i);
+                        }
+                    }
+                    else {
+                        newValues[i] = 0.0;
+                    }
+
+                }
+
+                DenseVector newVector = new DenseVector(newValues);
+
+                return new IndexedRow(index, newVector);
+
+            }
+        });
+
+        IndexedRowMatrix newMatrix = new IndexedRowMatrix(LURows.rdd());
+
+        return newMatrix;
+    }
+
+
+    private static CoordinateMatrix GetD_COORD(CoordinateMatrix A, boolean inverseValues, JavaSparkContext jsc) {
+
+        JavaRDD<MatrixEntry> rows = A.entries().toJavaRDD().cache();
+
+        final Broadcast<Boolean> inverseValuesBC = jsc.broadcast(inverseValues);
+
+        JavaRDD<MatrixEntry> LUEntries = rows.mapPartitions(new FlatMapFunction<Iterator<MatrixEntry>, MatrixEntry>() {
+            @Override
+            public Iterator<MatrixEntry> call(Iterator<MatrixEntry> matrixEntryIterator) throws Exception {
+                List<MatrixEntry> newLowerEntries = new ArrayList<MatrixEntry>();
+
+                boolean inverseValuesValue = inverseValuesBC.getValue().booleanValue();
+
+                while(matrixEntryIterator.hasNext()) {
+                    MatrixEntry currentEntry = matrixEntryIterator.next();
+
+                    if(currentEntry.i() == currentEntry.j()) {
+                        if(inverseValuesValue) {
+                            newLowerEntries.add(new MatrixEntry(currentEntry.i(), currentEntry.j(), 1.0/currentEntry.value()));
+                        }
+                        else {
+                            newLowerEntries.add(currentEntry);
+                        }
+
+                    }
+                    else {
+                        newLowerEntries.add(new MatrixEntry(currentEntry.i(), currentEntry.j(), 0.0));
+                    }
+
+                }
+
+                return newLowerEntries.iterator();
+            }
+        });
+
+        CoordinateMatrix newMatrix = new CoordinateMatrix(LUEntries.rdd());
+
+        return newMatrix;
+    }
+
+
 }
