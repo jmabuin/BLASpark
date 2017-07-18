@@ -31,7 +31,7 @@ import org.apache.spark.mllib.linalg.distributed.DistributedMatrix;
 /**
  * Class to implement the Conjugate Gradient method
  * @author Jose M. Abuin
- * @brief Class to perform the Conjugate Gradient method
+ * @brief Class to perform the Conjugate Gradient method. Valid only for symmetric and positive definite matrices
  */
 public class ConjugateGradientSolver {
 
