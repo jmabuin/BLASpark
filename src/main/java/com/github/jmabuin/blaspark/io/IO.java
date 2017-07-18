@@ -19,14 +19,19 @@
 
 package com.github.jmabuin.blaspark.io;
 
+import com.github.jmabuin.blaspark.operations.L3;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.mllib.linalg.DenseVector;
+import org.apache.spark.mllib.linalg.Vector;
+import org.apache.spark.mllib.linalg.distributed.*;
 
 import java.io.*;
+import java.util.List;
 
 /**
  * @author Jose M. Abuin
@@ -121,4 +126,71 @@ public class IO {
 		}
 
 	}
+
+	public static void writeMatrixToFileInHDFS(String file, DistributedMatrix matrix, Configuration conf){
+
+		try {
+			List<IndexedRow> localRows;
+			long numRows = 0;
+			long numCols = 0;
+
+			FileSystem fs = FileSystem.get(conf);
+
+			Path pt = new Path(file);
+
+			//FileSystem fileSystem = FileSystem.get(context.getConfiguration());
+			BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(fs.create(pt, true)));
+
+			JavaRDD<IndexedRow> rows;
+
+			if( matrix.getClass() == IndexedRowMatrix.class) {
+				rows = ((IndexedRowMatrix) matrix).rows().toJavaRDD();
+			}
+			else if (matrix.getClass() == CoordinateMatrix.class) {
+				rows = ((CoordinateMatrix)matrix).toIndexedRowMatrix().rows().toJavaRDD();
+			}
+			else if (matrix.getClass() == BlockMatrix.class){
+				rows = ((BlockMatrix)matrix).toIndexedRowMatrix().rows().toJavaRDD();
+			}
+			else {
+				rows = null;
+			}
+
+			localRows = rows.collect();
+
+			Vector vectors[] = new Vector[localRows.size()];
+
+			for(int i = 0; i< localRows.size(); i++) {
+				vectors[(int)localRows.get(i).index()] = localRows.get(i).vector();
+			}
+
+			numRows = matrix.numRows();
+			numCols = matrix.numCols();
+
+			bw.write("%%MatrixMarket matrix array real general");
+			bw.newLine();
+			bw.write(numRows+" "+numCols+" "+(numRows * numCols));
+			bw.newLine();
+
+			for(int i = 0; i< vectors.length; i++) {
+				bw.write(i+":");
+				for(int j = 0; j< vectors[i].size(); j++) {
+					bw.write(String.valueOf(vectors[i].apply(j))+",");
+				}
+
+				bw.newLine();
+			}
+
+			bw.close();
+			//fs.close();
+
+
+		} catch (IOException e) {
+			LOG.error("Error in " + IO.class.getName() + ": " + e.getMessage());
+			e.printStackTrace();
+			System.exit(1);
+		}
+
+	}
+
 }
