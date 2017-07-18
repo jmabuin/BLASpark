@@ -72,6 +72,20 @@ public class BLASpark {
 
             exCG.calculate();
         }
+        else if(BLASparkOptions.getMode() == GeneralOptions.Mode.JACOBI) {
+
+            LOG.warn("Starting Jacobi example...");
+            JacobiExample exJacobi = new JacobiExample(BLASparkOptions, ctx);
+
+            exJacobi.calculate();
+        }
+        else if(BLASparkOptions.getMode() == GeneralOptions.Mode.DMXDM) {
+
+            LOG.warn("Starting dense matrix dot dense matrix example...");
+            DmXDm exDmXDm = new DmXDm(BLASparkOptions, ctx);
+
+            exDmXDm.calculate();
+        }
         else {
             LOG.warn("No execution mode selected...");
             BLASparkOptions.printHelp();
