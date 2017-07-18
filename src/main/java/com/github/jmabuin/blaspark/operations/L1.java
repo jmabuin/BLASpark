@@ -42,4 +42,15 @@ public class L1 {
 
 	}
 
+	public static double vectorSumElements(DenseVector vector) {
+
+		double result = 0.0;
+
+		for(int i = 0; i< vector.size(); i++) {
+			result = result + vector.apply(i);
+		}
+
+		return result;
+	}
+
 }
