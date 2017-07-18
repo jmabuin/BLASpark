@@ -33,7 +33,7 @@ public class GeneralOptions {
 
     private Options options = null;
 
-    public enum Mode { HELP, DMXV, SMXV, CG}
+    public enum Mode { HELP, DMXV, SMXV, CG, JACOBI, DMXDM}
     public enum MatrixFormat {PAIRLINE, COORDINATE, BLOCK};
 
     private Mode mode;
@@ -87,7 +87,11 @@ public class GeneralOptions {
             } else if (cmd.hasOption('c') || cmd.hasOption("conjGrad")) {
                 // Case of add
                 this.mode = Mode.CG;
-            } else {
+            } else if(cmd.hasOption('j') || cmd.hasOption("jacobi")) {
+                this.mode = Mode.JACOBI;
+            } else if(cmd.hasOption('m') || cmd.hasOption("dmxdm")) {
+                this.mode = Mode.DMXDM;
+            }else {
                 // Default case. Help
                 LOG.warn("[" + this.getClass().getName() + "] :: No operation mode selected. Using help.");
                 this.mode = Mode.HELP;
@@ -155,9 +159,6 @@ public class GeneralOptions {
                 this.outputVectorPath = this.otherOptions[2];
             }
 
-
-
-
         }
         catch (UnrecognizedOptionException e) {
             e.printStackTrace();
@@ -182,7 +183,7 @@ public class GeneralOptions {
 
         OptionGroup general = new OptionGroup();
 
-        // Options: h, d, s, c, i, l, o, b, p
+        // Options: h, d, s, c, j, i, l, o, b, p
 
         // Help
         Option help = new Option("h","help", false,"Shows documentation");
@@ -201,6 +202,12 @@ public class GeneralOptions {
 
         Option conjGrad = new Option("c", "conjGrad", false, "Solves a system by using the conjugate gradient method");
         operations.addOption(conjGrad);
+
+        Option jacobi = new Option("j", "jacobi", false, "Solves a system by using the Jacobi method");
+        operations.addOption(jacobi);
+
+        Option dmxdm = new Option("m", "dmxdm", false, "Performs a distributed dense matrix dot distributed dense matrix operation");
+        operations.addOption(dmxdm);
 
         privateOptions.addOptionGroup(operations);
 
