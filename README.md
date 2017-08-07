@@ -30,7 +30,7 @@ To build **BLASpark**:
     mvn clean package
 
 ## Using and testing BLASpark
-*BLASpark** can be added to a project as a .jar dependency. However, if a user wants to test it, it comes with some examples:
+**BLASpark** can be added to a project as a .jar dependency. However, if a user wants to test it, it comes with some examples:
 
  - Dense matrix dot vector example.
  - Dense matrix dot dense matrix operation.
