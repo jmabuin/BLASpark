@@ -43,3 +43,37 @@ To launch the example, after building **BLASpark** we will enter into the _targe
 
     cd target
     spark-submit --class com.github.jmabuin.blaspark.examples.BLASpark --master yarn-cluster --driver-memory 1500m --executor-memory 3g --executor-cores 1 --verbose --num-executors 4 ./BLASpark-0.0.1.jar -d -p 4 Matrices/Matriz-16.mtx Matrices/Vector-16.mtx Matrices/Output-16.mtx
+
+In this way, the result vector will be stored in HDFS in _Matrices/Output-16.mtx_. To check all the available options for the examples, run the program without options. If not output is shown, it means that the output is written into the log system:
+
+    spark-submit --class com.github.jmabuin.blaspark.examples.BLASpark --master yarn-cluster ./BLASpark-0.0.1.jar
+    
+    usage: spark-submit --class com.github.jmabuin.blaspark.blaSpark
+            blaSpark-0.0.1.jar [Options] <Matrix file name> <Vector file name>
+            <Output file name> [--alpha <arg>] [-b | -l | -o] [--beta <arg>]
+            [-c | -d | -j | -m | -s] [--cols <arg>]  [-h] [-i <arg>]     [-p
+            <arg>] [--rows <arg>]
+     	blaSpark performs linear algebra operations ...
+     Available operating modes are:
+         --alpha <arg>        Alpha value for DMxV example
+      -b,--blocked            The matrix format will be a BlockMatrix
+         --beta <arg>         Beta value for DMxV example
+      -c,--conjGrad           Solves a system by using the conjugate gradient
+                              method
+         --cols <arg>         Number of cols for block in BlockMatrix format
+      -d,--dmxv               Performs a distributed dense matrix dot vector
+                              operation
+      -h,--help               Shows documentation
+      -i,--iteration <arg>    Number of iterations to perform the conjugate
+                              gradient method
+      -j,--jacobi             Solves a system by using the Jacobi method
+      -l,--pairLine           The matrix format will be a IndexedRowMatrix
+      -m,--dmxdm              Performs a distributed dense matrix dot
+                              distributed dense matrix operation
+      -o,--coordinate         The matrix format will be a CoordinateMatrix
+      -p,--partitions <arg>   Number of partitions to divide the matrix
+         --rows <arg>         Number of rows for block in BlockMatrix format
+      -s,--smxv               Performs a distributed sparse matrix dot vector
+                              operation
+     
+     Please report issues at josemanuel.abuin@usc.es
